@@ -53,20 +53,31 @@ class PretrainModels(nn.Module):
         super(PretrainModels, self).__init__()
         if model_type == 'inception_v3_google':
             self.model = models.inception_v3(pretrained=True, aux_logits=False)
+            self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
         elif model_type == 'resnet50':
             self.model = models.resnet50(pretrained=True,)
+            self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
         elif model_type == 'resnet152':
             self.model = models.resnet152(pretrained=True)
+            self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
         elif model_type == 'resnext101_32x8d':
             self.model = models.resnext101_32x8d(pretrained=True)
+            self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
         elif model_type == 'densenet121':
             self.model = models.densenet121(pretrained=True)
+            self.model.classifier = nn.Linear(self.model.classifier.in_features,
+                                                            num_classes)
         elif model_type == 'densenet201':
             self.model = models.densenet201(pretrained=True)
+            self.model.classifier = nn.Linear(self.model.classifier.in_features,
+                                                            num_classes)
+        elif model_type == 'mobilenet_v2':
+            self.model = models.mobilenet_v2(pretrained=True)
+            self.model.classifier._modules['1'] = nn.Linear(self.model.classifier._modules['1'].in_features,
+                                                            num_classes)
         else:
             raise ValueError('PretrainModels沒有這個模型！')
         self.model_type = model_type
-        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
     def forward(self, x):
         y = self.model(x)
@@ -149,13 +160,17 @@ class Model:
             self.save_model(total_loss, acc)
         print('验证耗时:%ds, loss=%.3f, acc=%.3f' % (end - start, total_loss, acc))
 
-    def predict(self, image, size):
+    def predict(self, image, size, return_prob=True):
         image = square(image, size)
         image = subprocess(image)
         image = torch.tensor(image).unsqueeze(dim=0).to(self.device)
         pred_y = self.model(image)
-        pred_y = torch.argmax(torch.softmax(pred_y, dim=-1), dim=-1).cpu().numpy()
-        return pred_y
+        pred_y = torch.softmax(pred_y, dim=-1).cpu().numpy()
+        pred_indice = np.argmax(pred_y, dim=-1)
+        if return_prob:
+            return pred_indice, pred_y[pred_indice]
+        else:
+            return pred_indice
 
     def model_eval(self):
         self.model.eval()
@@ -182,6 +197,8 @@ class Model:
 
 
 if __name__ == '__main__':
-    net = BackBoneNet()
+    net = PretrainModels('densenet121', 4)
+    # print(net.model._modules)
+    print(net)
     net.eval()
     torchsummary.summary(net, (3, 256, 256))

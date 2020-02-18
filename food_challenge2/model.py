@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torchsummary
+from torchvision import models
 from tqdm import tqdm
 from utils.metric import get_acc
 from utils.loss import cross_entroy
@@ -47,11 +48,22 @@ class BackBoneNet(nn.Module):
         y = self.fc2(y)
         return y
 
-
 class Model:
     def __init__(self, model_type, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
         if model_type == 'BackBoneNet':
             self.model = BackBoneNet(4).to(device)
+        elif model_type == 'inception_v3_google':
+            self.model = models.inception_v3(pretrained=True)
+        elif model_type == 'resnet50':
+            self.model = models.resnet50(pretrained=True)
+        elif model_type == 'resnet152':
+            self.model = models.resnet152(pretrained=True)
+        elif model_type == 'resnext101_32x8d':
+            self.model = models.resnext101_32x8d(pretrained=True)
+        elif model_type == 'densenet121':
+            self.model = models.densenet121(pretrained=True)
+        elif model_type == 'densenet201':
+            self.model = models.densenet201(pretrained=True)
         else:
             raise ValueError('沒有這個模型！')
         self.device = device

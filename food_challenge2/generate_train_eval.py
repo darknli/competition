@@ -1,10 +1,17 @@
 import random
+import os
 
 
 def generate_train_split(data_path, train_path, val_path, split_factor=0.1):
     dataset = []
     label2num = {}
+    train_dir = os.path.basename(train_path)
+    if not os.path.exists(train_dir):
+        os.makedirs(train_dir)
     train_writer = open(train_path, 'w')
+    val_dir = os.path.basename(val_path)
+    if not os.path.exists(val_dir):
+        os.makedirs(val_dir)
     val_writer = open(val_path, 'w')
 
     with open(data_path) as f:

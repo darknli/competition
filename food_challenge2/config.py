@@ -12,6 +12,7 @@ image_root = 'D:/temp_data/food/train'
 
 split_num = 0.2
 
+num_classes = 4
 batch_size = 32
 num_workers = 6
 epochs = 80

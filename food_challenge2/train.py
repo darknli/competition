@@ -10,7 +10,7 @@ def train():
     val_loader = get_data_generator(val_path, image_root, size, batch_size, False, num_workers, 'val')
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = Model('inception_v3_google', device, learning_rate=learning_rate)
+    model = Model('inception_v3_google', num_classes, device, learning_rate=learning_rate)
     # model.load_model('model/BackBoneNet.pth')
     for epoch in range(epochs):
         print('第%d轮' % epoch)

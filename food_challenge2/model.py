@@ -48,14 +48,13 @@ class BackBoneNet(nn.Module):
         y = self.fc2(y)
         return y
 
-class Model:
-    def __init__(self, model_type, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
-        if model_type == 'BackBoneNet':
-            self.model = BackBoneNet(4).to(device)
-        elif model_type == 'inception_v3_google':
-            self.model = models.inception_v3(pretrained=True)
+class PretrainModels(nn.Module):
+    def __init__(self, model_type, num_classes):
+        super(PretrainModels, self).__init__()
+        if model_type == 'inception_v3_google':
+            self.model = models.inception_v3(pretrained=True, aux_logits=False)
         elif model_type == 'resnet50':
-            self.model = models.resnet50(pretrained=True)
+            self.model = models.resnet50(pretrained=True,)
         elif model_type == 'resnet152':
             self.model = models.resnet152(pretrained=True)
         elif model_type == 'resnext101_32x8d':
@@ -65,7 +64,22 @@ class Model:
         elif model_type == 'densenet201':
             self.model = models.densenet201(pretrained=True)
         else:
-            raise ValueError('沒有這個模型！')
+            raise ValueError('PretrainModels沒有這個模型！')
+        self.model_type = model_type
+        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+
+    def forward(self, x):
+        y = self.model(x)
+        return y
+
+class Model:
+    def __init__(self, model_type, num_classes, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
+        if model_type == 'BackBoneNet':
+            self.model = BackBoneNet(4)
+        else:
+            self.model = PretrainModels(model_type, num_classes)
+
+        self.model = self.model.to(device)
         self.device = device
         self.optimizer = self.get_optimizer(opt_mode, learning_rate)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(

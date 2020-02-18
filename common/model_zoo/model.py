@@ -1,14 +1,13 @@
-import torch
 from torch import nn
 import torchsummary
 from torchvision import models
 from tqdm import tqdm
-from utils.metric import get_acc
-from utils.loss import cross_entroy
+from common.utils.metric import get_acc
+from common.utils.loss import cross_entroy
 from time import time
 from numpy import inf
 import os
-from utils.subprocess import *
+from common.utils.subprocess import *
 import torch
 
 class BackBoneNet(nn.Module):
@@ -83,6 +82,7 @@ class PretrainModels(nn.Module):
         y = self.model(x)
         return y
 
+
 class Model:
     def __init__(self, model_type, num_classes, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
         if model_type == 'BackBoneNet':
@@ -131,6 +131,14 @@ class Model:
         end = time()
         print('训练耗时:%ds, loss=%.3f' % (end - start, total_loss/total_count))
 
+    def set_num_fintune_layers(self, num_layers):
+        layers = [param for param in self.model.parameters()]
+        if 0 < num_layers < 1:
+            num_layers = int(len(layers) * 0.5)
+        for param in layers[:-num_layers]:
+            param.requires_grad = False
+        # torchsummary.summary(self.model, (3, 256, 256))
+
     def eval(self, data_loader, save_best_model=True):
         start = time()
         self.model.eval()
@@ -160,13 +168,13 @@ class Model:
             self.save_model(total_loss, acc)
         print('验证耗时:%ds, loss=%.3f, acc=%.3f' % (end - start, total_loss, acc))
 
-    def predict(self, image, size, return_prob=True):
+    def predict(self, image, size, return_prob=False):
         image = square(image, size)
         image = subprocess(image)
         image = torch.tensor(image).unsqueeze(dim=0).to(self.device)
         pred_y = self.model(image)
         pred_y = torch.softmax(pred_y, dim=-1).cpu().numpy()
-        pred_indice = np.argmax(pred_y, dim=-1)
+        pred_indice = np.argmax(pred_y, -1)
         if return_prob:
             return pred_indice, pred_y[pred_indice]
         else:

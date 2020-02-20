@@ -176,7 +176,8 @@ class Model:
         pred_y = torch.softmax(pred_y, dim=-1).cpu().numpy()
         pred_indice = np.argmax(pred_y, -1)
         if return_prob:
-            return pred_indice, pred_y[pred_indice]
+            prob = pred_y.max(axis=-1)
+            return pred_indice, prob
         else:
             return pred_indice
 

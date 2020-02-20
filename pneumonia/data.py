@@ -24,22 +24,26 @@ class FoodDataset(Dataset):
         anno_list = []
         with open(filename) as f:
             for line in f:
-                idx, label = line.strip().split(',')
-                anno_list.append(('%s/%s.jpg' % (root_path, idx), int(label)))
+                fields = line.strip().split(',')
+                idx, label, box = fields[0], fields[1], fields[2:]
+                anno_list.append(('%s/%s.jpg' % (root_path, idx), int(label), [float(n) for n in box]))
         return anno_list
 
     def __len__(self):
         return self.len
 
     def __getitem__(self, idx):
-        path, label = self.anno_list[idx]
+        path, label, box = self.anno_list[idx]
         image = cv2.imread(path).astype(np.float32)
-        image = square(image, self.size, self.mode)
+        w, h = image.shape[:2]
+        image = cv2.resize(image, None, fx=0.25, fy=0.25)
+        # image = square(image, self.size, self.mode)
         if self.mode == 'train' and np.random.random() < 0.5:
             image = self.augment(image, bright=10, contrast=0.1, rotate=True, guassion_blur=False)
         image = subprocess(image)
         # image = self.transforms(image)
-        return image, label
+        box[0], box[1], box[2], box[3] = box[0]/w, box[1]/w, box[2]/h, box[3]/h
+        return image, label, np.array(box, dtype=np.float32)
 
     def augment(self, image, flip=True, bright=0, contrast=None, rotate=False, guassion_blur=False):
         if flip and np.random.random() < 0.5:

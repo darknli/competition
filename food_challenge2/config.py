@@ -10,8 +10,8 @@ num_test = 856
 
 split_num = 0.2
 
-batch_size = 32
-num_workers = 6
+batch_size = 24
+num_workers = 4
 epochs = 80
 size = 256
 learning_rate = 10e-4

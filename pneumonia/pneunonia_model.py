@@ -7,6 +7,7 @@ from common.utils.loss import cross_entroy, smoth_l1
 from common.utils.subprocess import *
 from tqdm import tqdm
 import os
+from numpy import inf
 import torchsummary
 import torch
 
@@ -47,12 +48,29 @@ class PretrainBoxModels(nn.Module):
         return y, pred_reg
 
 
-class BoxModel(Model):
+class BoxModel:
     def __init__(self, model_type, num_classes, num_nc, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
         super().__init__(model_type, num_classes, device, save_model_dir, opt_mode, learning_rate)
         self.model = PretrainBoxModels(model_type, num_nc, num_classes)
         self.model = self.model.to(device)
         # torchsummary.summary(self.model, input_size=(3, 256, 256))
+        self.device = device
+        self.optimizer = self.get_optimizer(opt_mode, learning_rate)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer, mode='min', factor=0.1, patience=8,
+            verbose=True, threshold_mode='abs', min_lr=10e-7
+        )
+        self.min_loss = inf
+        self.save_model_dir = save_model_dir
+        self.save_model_path = os.path.join(save_model_dir, '%s.pth' % model_type)
+
+    def get_optimizer(self, mode='adam', learning_rate=10e-2):
+        if mode == 'adam':
+            from torch.optim import Adam
+            return Adam(self.model.parameters(), lr=learning_rate)
+        elif mode == 'sgd':
+            from torch.optim import SGD
+            return SGD(self.model.parameters(), lr=learning_rate)
 
     def train(self, data_loader):
         start = time()

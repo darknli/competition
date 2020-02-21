@@ -13,8 +13,8 @@ def train():
     train_loader = get_data_generator(train_path, image_root, size, batch_size, True, num_workers, 'train', False)
     val_loader = get_data_generator(val_path, image_root, size, batch_size, False, num_workers, 'val', False)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # model = BoxModel('inception_v3_google', num_classes, 128, device, save_model_dir=model_path, learning_rate=learning_rate)
-    model = Model('inception_v3_google', num_classes, device, save_model_dir=model_path, learning_rate=learning_rate)
+    model = BoxModel('inception_v3_google', num_classes, 128, device, save_model_dir=model_path, learning_rate=learning_rate)
+    # model = Model('inception_v3_google', num_classes, device, save_model_dir=model_path, learning_rate=learning_rate)
     # model.set_num_fintune_layers(10)
     # model.load_model('model/BackBoneNet.pth')
     for epoch in range(epochs):

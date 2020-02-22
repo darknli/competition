@@ -38,24 +38,25 @@ class FoodDataset(Dataset):
         w, h = image.shape[:2]
         image = cv2.resize(image, None, fx=0.25, fy=0.25)
         # image = square(image, self.size, self.mode)
-        if self.mode == 'train' and np.random.random() < 0.5:
-            image = self.augment(image, bright=10, contrast=0.1, rotate=True, guassion_blur=False)
+        if self.mode == 'train' and np.random.random() < 0.8:
+            image = self.augment(image, bright=20, contrast=0.1, rotate=True, guassion_blur=False)
         image = subprocess(image)
         # image = self.transforms(image)
         box[0], box[1], box[2], box[3] = box[0]/w, box[1]/w, box[2]/h, box[3]/h
-        return image, label, np.array(box, dtype=np.float32)
+        # return image, label, np.array(box, dtype=np.float32)
+        return image, label
 
     def augment(self, image, flip=True, bright=0, contrast=None, rotate=False, guassion_blur=False):
         if flip and np.random.random() < 0.5:
             image = image[:, ::-1, :]
-        if flip and np.random.random() < 0.5:
-            image = image[::-1, :, :]
-        if rotate:
-            du = np.random.choice([90, -90, 180])
-            h, w = image.shape[:2]
-            center = (w//2, h//2)
-            m = cv2.getRotationMatrix2D(center, du, 1.0)
-            image = cv2.warpAffine(image, m, (w, h))
+        # if flip and np.random.random() < 0.5:
+        #     image = image[::-1, :, :]
+        # if rotate:
+        #     du = np.random.choice([90, -90, 180])
+        #     h, w = image.shape[:2]
+        #     center = (w//2, h//2)
+        #     m = cv2.getRotationMatrix2D(center, du, 1.0)
+        #     image = cv2.warpAffine(image, m, (w, h))
         if bright:
             bright = np.random.randint(-bright, bright)
             image += bright

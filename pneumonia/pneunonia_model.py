@@ -85,8 +85,8 @@ class PretrainRegBoxModel(nn.Module):
 
 
 class BoxModel:
-    def __init__(self, model_type, num_classes, num_nc, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
-        super().__init__(model_type, num_classes, device, save_model_dir, opt_mode, learning_rate)
+    def __init__(self, model_type, num_classes, num_nc, device, save_model_dir='model',
+                 opt_mode='adam', learning_rate=10e-2, prefix=''):
         self.model = PretrainBoxModels(model_type, num_nc, num_classes)
         self.model = self.model.to(device)
         # torchsummary.summary(self.model, input_size=(3, 256, 256))
@@ -98,7 +98,7 @@ class BoxModel:
         )
         self.min_loss = inf
         self.save_model_dir = save_model_dir
-        self.save_model_path = os.path.join(save_model_dir, '%s.pth' % model_type)
+        self.save_model_path = os.path.join(save_model_dir, '%s%s.pth' % (prefix, model_type))
 
     def get_optimizer(self, mode='adam', learning_rate=10e-2):
         if mode == 'adam':
@@ -206,9 +206,9 @@ class BoxModel:
 
 
 class RegBoxModel:
-    def __init__(self, model_type, num_classes, num_nc, device, save_model_dir='model', opt_mode='adam', learning_rate=10e-2):
-        super().__init__(model_type, num_classes, device, save_model_dir, opt_mode, learning_rate)
-        self.model = PretrainBoxModels(model_type, num_nc)
+    def __init__(self, model_type, num_nc, device, save_model_dir='model', opt_mode='adam',
+                 learning_rate=10e-2, prefix=''):
+        self.model = PretrainRegBoxModel(model_type, num_nc)
         self.model = self.model.to(device)
         # torchsummary.summary(self.model, input_size=(3, 256, 256))
         self.device = device
@@ -219,7 +219,7 @@ class RegBoxModel:
         )
         self.min_loss = inf
         self.save_model_dir = save_model_dir
-        self.save_model_path = os.path.join(save_model_dir, '%s.pth' % model_type)
+        self.save_model_path = os.path.join(save_model_dir, '%s%s.pth' % (prefix, model_type))
 
     def get_optimizer(self, mode='adam', learning_rate=10e-2):
         if mode == 'adam':
@@ -244,15 +244,15 @@ class RegBoxModel:
                 label = label.to(self.device)
                 bbox = bbox.to(self.device)
                 pred_y, pred_box = self.model(image)
-                acc = get_acc(pred_y, label).item()
-                reg_loss, _ = smoth_l1(pred_y, label, 0.8)
+                # acc = get_acc(pred_y, label).item()
+                reg_loss, _ = smoth_l1(pred_y, label.view(-1, 1).float(), 0.8)
                 box_loss, _ = smoth_l1(pred_box, bbox, 1)
                 loss = reg_loss * reg_factor + box_loss * box_factor
                 loss.backward()
                 self.optimizer.step()
                 total_loss += loss.item()
                 total_count += 1
-                pbar.set_postfix(loss=loss.item(), acc=acc)
+                pbar.set_postfix(loss=loss.item())
         end = time()
         print('训练耗时:%ds, loss=%.3f' % (end - start, total_loss/total_count))
 
@@ -283,32 +283,31 @@ class RegBoxModel:
                 total_true_result.append(label)
         pred_y = torch.cat(total_pred_result, dim=0)
         true_y = torch.cat(total_true_result, dim=0)
-        acc = get_acc(pred_y, true_y).item()
+        # acc = get_acc(pred_y, true_y).item()
         end = time()
         total_loss /= total_count
         self.scheduler.step(total_loss)
         if save_best_model:
-            self.save_model(total_loss, acc)
-        print('验证耗时:%ds, loss=%.3f, acc=%.3f' % (end - start, total_loss, acc))
+            self.save_model(total_loss)
+        print('验证耗时:%ds, loss=%.3f' % (end - start, total_loss))
 
     def predict(self, image, size):
         image = square(image, size)
         image = subprocess(image)
         image = torch.tensor(image).unsqueeze(dim=0).to(self.device)
         pred_y, _ = self.model(image)
-        return [round(p) for p in pred_y]
+        return [int(round(min(max(p, 0), 4))) for p in pred_y.cpu().numpy().reshape(-1)]
 
     def model_eval(self):
         self.model.eval()
 
-    def save_model(self, loss, acc):
+    def save_model(self, loss):
         if loss < self.min_loss:
             if not os.path.exists(self.save_model_dir):
                 os.makedirs(self.save_model_dir)
             self.min_loss = loss
             params = {}
             params['loss'] = loss
-            params['acc'] = acc
             params['state_dict'] = self.model.state_dict()
             torch.save(params, self.save_model_path)
             print('min_loss update to %s' % loss)

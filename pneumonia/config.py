@@ -1,7 +1,7 @@
 
 # pneumonia
-dataset_path = 'E:/Data/pneumonia/train.csv'
-box_path = 'E:/Data/pneumonia/train_bboxes.csv'
+dataset_path = r'E:\Data\研习社\pneumonia/train.csv'
+box_path = r'E:\Data\研习社\pneumonia/train_bboxes.csv'
 train_path = 'D:/temp_data/pneumonia/train.txt'
 val_path = 'D:/temp_data/pneumonia/val.txt'
 image_root = 'D:/temp_data/pneumonia/train'

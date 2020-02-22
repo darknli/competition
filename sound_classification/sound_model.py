@@ -11,10 +11,10 @@ from common.utils.subprocess import *
 import torch
 
 class BackBoneNet(nn.Module):
-    def __init__(self, base_num=4):
+    def __init__(self, base_num=4, num_classes=50):
         super(BackBoneNet, self).__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=4*base_num, kernel_size=3)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=4*base_num, kernel_size=3)
 
         self.conv2 = nn.Conv2d(in_channels=4*base_num, out_channels=8*base_num, kernel_size=3)
 
@@ -23,7 +23,7 @@ class BackBoneNet(nn.Module):
         self.conv4 = nn.Conv2d(in_channels=16*base_num, out_channels=32*base_num, kernel_size=3)
 
         self.fc1 = nn.Linear(in_features=32*base_num, out_features=16*base_num)
-        self.fc2 = nn.Linear(in_features=16*base_num, out_features=4)
+        self.fc2 = nn.Linear(in_features=16*base_num, out_features=num_classes)
 
         self.pool = nn.MaxPool2d(3, 2)
         self.relu = nn.ReLU()
@@ -84,13 +84,10 @@ class PretrainModels(nn.Module):
 
 
 class Model:
-    def __init__(self, model_type, num_classes, device, save_model_dir='model',
-                 opt_mode='adam', learning_rate=1e-2, prefix=""):
-        if model_type == 'BackBoneNet':
-            self.model = BackBoneNet(4)
-        else:
-            self.model = PretrainModels(model_type, num_classes)
-
+    def __init__(self, model_type, num_classes, device, save_model_dir='model', opt_mode='adam',
+                 learning_rate=10e-2, prefix=""):
+        self.model = PretrainModels(model_type, num_classes)
+        # self.model = BackBoneNet(8, num_classes)
         self.model = self.model.to(device)
         self.device = device
         self.optimizer = self.get_optimizer(opt_mode, learning_rate)
@@ -100,7 +97,7 @@ class Model:
         )
         self.min_loss = inf
         self.save_model_dir = save_model_dir
-        self.save_model_path = os.path.join(save_model_dir, '%s%s.pth' % (model_type, prefix))
+        self.save_model_path = os.path.join(save_model_dir, '%s%s.pth' % (prefix, model_type))
 
     def get_optimizer(self, mode='adam', learning_rate=10e-2):
         if mode == 'adam':
@@ -169,10 +166,8 @@ class Model:
             self.save_model(total_loss, acc)
         print('验证耗时:%ds, loss=%.3f, acc=%.3f' % (end - start, total_loss, acc))
 
-    def predict(self, image, size, return_prob=False):
-        image = square(image, size)
-        image = subprocess(image)
-        image = torch.tensor(image).unsqueeze(dim=0).to(self.device)
+    def predict(self, image, return_prob=False):
+        image = torch.tensor(image).unsqueeze(0).to(self.device)
         pred_y = self.model(image)
         pred_y = torch.softmax(pred_y, dim=-1).cpu().numpy()
         pred_indice = np.argmax(pred_y, -1)
@@ -198,17 +193,9 @@ class Model:
             print('min_loss update to %s' % loss)
 
     def load_model(self, model_path):
+        if not os.path.isfile(model_path):
+            raise ValueError('模型路径不对')
         params = torch.load(model_path, map_location=self.device)
         self.model.load_state_dict(params['state_dict'])
         self.min_loss = params['loss']
         print('已加载{}路径下的模型，当前效果是loss:{:.3f}, acc:{}'.format(model_path, params['loss'], params['acc']))
-
-
-
-
-if __name__ == '__main__':
-    net = PretrainModels('densenet121', 4)
-    # print(net.model._modules)
-    print(net)
-    net.eval()
-    torchsummary.summary(net, (3, 256, 256))

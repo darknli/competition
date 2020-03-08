@@ -74,6 +74,21 @@ class PretrainModels(nn.Module):
             self.model = models.mobilenet_v2(pretrained=True)
             self.model.classifier._modules['1'] = nn.Linear(self.model.classifier._modules['1'].in_features,
                                                             num_classes)
+        elif model_type == 'mnasnet0_5':
+            self.model = models.mnasnet0_5(pretrained=True)
+            self.model.classifier._modules['1'] = nn.Linear(self.model.classifier._modules['1'].in_features,
+                                                            num_classes)
+        elif model_type == 'mnasnet0_75':
+            self.model = models.mnasnet0_5(pretrained=True)
+            self.model.classifier._modules['1'] = nn.Linear(self.model.classifier._modules['1'].in_features,
+                                                            num_classes)
+        elif model_type == 'squeezenet1_0':
+            self.model = models.squeezenet1_0(pretrained=True)
+            self.model.classifier.final_conv = nn.Conv2d(1000, num_classes, kernel_size=1)
+        elif model_type == 'vgg16':
+            self.model = models.vgg16(pretrained=True)
+            self.model.classifier._modules['6'] = nn.Linear(self.model.classifier._modules['6'].in_features,
+                                                            num_classes)
         else:
             raise ValueError('PretrainModels沒有這個模型！')
         self.model_type = model_type
@@ -86,8 +101,8 @@ class PretrainModels(nn.Module):
 class Model:
     def __init__(self, model_type, num_classes, device, save_model_dir='model', opt_mode='adam',
                  learning_rate=10e-2, prefix=""):
-        self.model = PretrainModels(model_type, num_classes)
-        # self.model = BackBoneNet(8, num_classes)
+        # self.model = PretrainModels(model_type, num_classes)
+        self.model = BackBoneNet(16, num_classes)
         self.model = self.model.to(device)
         self.device = device
         self.optimizer = self.get_optimizer(opt_mode, learning_rate)
@@ -199,3 +214,8 @@ class Model:
         self.model.load_state_dict(params['state_dict'])
         self.min_loss = params['loss']
         print('已加载{}路径下的模型，当前效果是loss:{:.3f}, acc:{}'.format(model_path, params['loss'], params['acc']))
+
+
+if __name__ == '__main__':
+    model = BackBoneNet(16, 50).cuda()
+    torchsummary.summary(model, (1, 128, 128))
